@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bradhe/stopwatch"
 	"github.com/iotaledger/iota.go/account/deposit"
 	"github.com/iotaledger/iota.go/account/event/listener"
 	"github.com/iotaledger/iota.go/bundle"
@@ -23,8 +24,8 @@ import (
 
 //Global variables
 var (
-	Seed1              = "NIXIDSXHTTAHDCGNHRQOIHEKDKBNHYTY9FYQSGYNOACACOKWNBHPFZZZZMKHDEUPOTWMCVAHMXA9XNBPM"
-	Seed2              = "CL9YNQZKNCFDCFZCEPBNH9ATYJIVEDOIVCEPFP9XA9GRHYKZZXVHP9KNIQAVNDQF9TYXEPPLPOTLNSQRX"
+	Seed1              = "JAZ9IZYUDEDQDQFCOAUV9MMZAUN9KDMUI9IUYVKFFBRQDMYBMBLZHV9P9LNB9KJG9KLGSBIGDLHGXN9JM"
+	Seed2              = "JWHRFGDSHAXCM9DJKOGRXOREKXQJCUXMAGJ9TPCJRJYGQBECMRNPEPZFVEHZWBUSYOKPCBITUFAWNKFFZ"
 	Store              badger.BadgerStore
 	sendingWaitGroup   = &sync.WaitGroup{}
 	Account1           account.Account
@@ -34,13 +35,13 @@ var (
 	CurrentlyReceiving account.Account
 	SendingInProgress  bool
 	Timesource         = timesrc.NewNTPTimeSource("time.google.com")
+	Watch              stopwatch.Watch
 )
 
 func main() {
 	//Initialize storage
-	Store, err := badger.NewBadgerStore("D:\\Repositories\\golearning\\AccountDB")
+	Store, err := badger.NewBadgerStore("D:\\Repositories\\AccountSpammer\\AccountDB")
 	must(err)
-
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, os.Kill)
 	go func() {
@@ -79,10 +80,12 @@ func main() {
 		for {
 			select {
 			case bndl := <-lis1.ReceivedDeposit:
-				fmt.Println("Account 1 > Received deposit on:", bndl[0].Address)
+				Watch.Stop()
+				fmt.Println("Account 1 > Received deposit after", Watch.Seconds(), "on:", bndl[0].Address)
 				sendingWaitGroup.Done()
 			case bndl := <-lis1.SentTransfer:
 				fmt.Println("Account 1 > Sending to:", bndl[0].Address)
+				Watch = stopwatch.Start()
 			}
 		}
 	}()
@@ -92,10 +95,12 @@ func main() {
 		for {
 			select {
 			case bndl := <-lis2.ReceivedDeposit:
-				fmt.Println("Account 2 > Received deposit on:", bndl[0].Address)
+				Watch.Stop()
+				fmt.Println("Account 2 > Received deposit after", Watch.Seconds(), "on:", bndl[0].Address)
 				sendingWaitGroup.Done()
 			case bndl := <-lis2.SentTransfer:
 				fmt.Println("Account 2 > Sending to:", bndl[0].Address)
+				Watch = stopwatch.Start()
 			}
 		}
 	}()
